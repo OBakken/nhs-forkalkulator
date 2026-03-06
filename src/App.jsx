@@ -115,6 +115,10 @@ export default function App() {
     setAppStep("forvalg");
   }, []);
 
+  const handleFeedChange = useCallback((feed) => {
+    setFeedData(feed);
+  }, []);
+
   const handleFeedComplete = useCallback((feed) => {
     setFeedData(feed);
     setAppStep("resultat");
@@ -150,6 +154,7 @@ export default function App() {
         <div style={{ display: showForvalg ? "block" : "none" }}>
           <FeedSelection
             horse={horse}
+            onChange={handleFeedChange}
             onComplete={handleFeedComplete}
             onBack={handleBack}
           />

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 // ============================================================
 // NHS Fôrkalkulator — Fôrvalg-side v4
@@ -704,7 +704,7 @@ const productBtnStyle = {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function FeedSelection({ horse: horseProp, onComplete, onBack }) {
+export default function FeedSelection({ horse: horseProp, onComplete, onBack, onChange }) {
   const horse = horseProp;
 
   const needs = useMemo(() => calculateNeeds(horse), [horse]);
@@ -718,6 +718,33 @@ export default function FeedSelection({ horse: horseProp, onComplete, onBack }) 
   const [showConcPicker, setShowConcPicker] = useState(false);
   const [showSuppPicker, setShowSuppPicker] = useState(false);
   const [activeSection, setActiveSection] = useState("grovfor");
+
+  // --- Synkroniser fôrdata til App via onChange ---
+  const enrichedFeed = useMemo(() => {
+    const enrichedRoughages = roughages.map(r => {
+      const typeInfo = ROUGHAGE_TYPES.find(t => t.id === r.typeId);
+      const cutInfo = CUTTING_TIMES.find(c => c.id === r.cutting);
+      const ts = r.customTS || (typeInfo?.ts || 72);
+      const tsFrac = ts / 100;
+      if (r.customMode && r.customFEh > 0) {
+        return { name: `${typeInfo?.shortLabel || "Grovfôr"}, ${cutInfo?.label?.toLowerCase() || ""}`, kgPerDay: r.kgPerDay, tsPercent: ts, FEh: r.customFEh, protein: r.customProt || 0, Ca: r.customCa || 0, P: r.customP || 0 };
+      }
+      return { name: `${typeInfo?.shortLabel || "Grovfôr"}, ${cutInfo?.label?.toLowerCase() || ""}`, kgPerDay: r.kgPerDay, tsPercent: ts, FEh: (cutInfo?.FEh || 0) * tsFrac, protein: (cutInfo?.protein || 0) * tsFrac, Ca: (cutInfo?.Ca || 0) * tsFrac, P: (cutInfo?.P || 0) * tsFrac };
+    });
+    const enrichedConcentrates = concentrates.map(c => {
+      const prod = CONCENTRATES.find(p => p.id === c.productId);
+      return { ...c, name: prod?.name || "", supplier: prod?.supplier || "", FEh: prod?.FEh || 0, protein: prod?.protein || 0, Ca: prod?.Ca || 0, P: prod?.P || 0, density: c.customDensity || prod?.density || 0.70 };
+    });
+    const enrichedSupplements = supplements.map(s => {
+      const prod = SUPPLEMENTS.find(p => p.id === s.productId);
+      return { ...s, name: prod?.name || "", FEh: prod?.FEh || 0, protein: prod?.protein || 0, Ca: prod?.Ca || 0, P: prod?.P || 0, unit: prod?.unit || "g" };
+    });
+    return { roughages: enrichedRoughages, concentrates: enrichedConcentrates, supplements: enrichedSupplements };
+  }, [roughages, concentrates, supplements]);
+
+  useEffect(() => {
+    if (onChange) onChange(enrichedFeed);
+  }, [enrichedFeed, onChange]);
 
   // --- Hjelpefunksjon: beregn effektiv kg for et kraftfôr-entry ---
   const getEffectiveKg = (c) => {
@@ -1149,27 +1176,7 @@ export default function FeedSelection({ horse: horseProp, onComplete, onBack }) 
           <button onClick={onBack} style={{ padding: "11px 22px", border: "none", borderRadius: 10, background: "#f0ece6", color: "#5a5347", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>← Tilbake</button>
         )}
         {onComplete && (
-          <button onClick={() => {
-            const enrichedRoughages = roughages.map(r => {
-              const typeInfo = ROUGHAGE_TYPES.find(t => t.id === r.typeId);
-              const cutInfo = CUTTING_TIMES.find(c => c.id === r.cutting);
-              const ts = r.customTS || (typeInfo?.ts || 72);
-              const tsFrac = ts / 100;
-              if (r.customMode && r.customFEh > 0) {
-                return { name: `${typeInfo?.shortLabel || "Grovfôr"}, ${cutInfo?.label?.toLowerCase() || ""}`, kgPerDay: r.kgPerDay, tsPercent: ts, FEh: r.customFEh, protein: r.customProt || 0, Ca: r.customCa || 0, P: r.customP || 0 };
-              }
-              return { name: `${typeInfo?.shortLabel || "Grovfôr"}, ${cutInfo?.label?.toLowerCase() || ""}`, kgPerDay: r.kgPerDay, tsPercent: ts, FEh: (cutInfo?.FEh || 0) * tsFrac, protein: (cutInfo?.protein || 0) * tsFrac, Ca: (cutInfo?.Ca || 0) * tsFrac, P: (cutInfo?.P || 0) * tsFrac };
-            });
-            const enrichedConcentrates = concentrates.map(c => {
-              const prod = CONCENTRATES.find(p => p.id === c.productId);
-              return { ...c, name: prod?.name || "", supplier: prod?.supplier || "", FEh: prod?.FEh || 0, protein: prod?.protein || 0, Ca: prod?.Ca || 0, P: prod?.P || 0, density: c.customDensity || prod?.density || 0.70 };
-            });
-            const enrichedSupplements = supplements.map(s => {
-              const prod = SUPPLEMENTS.find(p => p.id === s.productId);
-              return { ...s, name: prod?.name || "", FEh: prod?.FEh || 0, protein: prod?.protein || 0, Ca: prod?.Ca || 0, P: prod?.P || 0, unit: prod?.unit || "g" };
-            });
-            onComplete({ roughages: enrichedRoughages, concentrates: enrichedConcentrates, supplements: enrichedSupplements });
-          }} style={{ padding: "11px 26px", border: "none", borderRadius: 10, background: "linear-gradient(135deg, #2d8a56, #0d9488)", color: "#fff", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 10px #2d8a5630", marginLeft: "auto" }}>Se resultater →</button>
+          <button onClick={() => onComplete(enrichedFeed)} style={{ padding: "11px 26px", border: "none", borderRadius: 10, background: "linear-gradient(135deg, #2d8a56, #0d9488)", color: "#fff", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 10px #2d8a5630", marginLeft: "auto" }}>Se resultater →</button>
         )}
       </div>
 
