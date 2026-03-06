@@ -358,7 +358,7 @@ function calculateNeeds(horse) {
       koeff, dtv: Math.round(dtv * 1000), pctOfAdult: Math.round(pct),
       metW, bcsFactor,
       FEh_base: parseFloat(fehVedlikehold.toFixed(2)),
-      FEh_total: parseFloat(fehBeforeBcs.toFixed(2)),
+      FEh_total: parseFloat((fehVedlikehold + fehVekst).toFixed(2)),
       FEh_final: parseFloat(fehFinal.toFixed(2)),
       proteinRatio: protRatio, protein_total: Math.round(proteinTotal),
       Ca_target: parseFloat(ca.toFixed(1)), P_target: parseFloat(p.toFixed(1)),
